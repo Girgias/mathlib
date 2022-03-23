@@ -4,8 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Johannes Hölzl, Kenny Lau, Johan Commelin, Mario Carneiro, Kevin Buzzard,
 Amelia Livingston, Yury Kudryashov
 -/
-import data.set.lattice
-import data.set_like.basic
+import group_theory.subsemigroup.basic
 
 /-!
 # Submonoids: definition and `complete_lattice` structure
@@ -45,7 +44,7 @@ Note that `submonoid M` does not actually require `monoid M`, instead requiring 
 `mul_one_class M`.
 
 This file is designed to have very few dependencies. In particular, it should not use natural
-numbers.
+numbers. `submonoid` is implemented by extending `subsemigroup` requiring `one_mem'`.
 
 ## Tags
 submonoid, submonoids
@@ -78,11 +77,14 @@ export add_mem_class (add_mem)
 
 attribute [to_additive] one_mem_class mul_mem_class
 
+set_option old_structure_cmd true
+
 /-- A submonoid of a monoid `M` is a subset containing 1 and closed under multiplication. -/
-structure submonoid (M : Type*) [mul_one_class M] :=
-(carrier : set M)
+structure submonoid (M : Type*) [mul_one_class M] extends subsemigroup M :=
 (one_mem' : (1 : M) ∈ carrier)
-(mul_mem' {a b} : a ∈ carrier → b ∈ carrier → a * b ∈ carrier)
+
+/-- A submonoid of a monoid `M` can be considered as a subsemigroup of that monoid. -/
+add_decl_doc submonoid.to_subsemigroup
 
 /-- `submonoid_class S M` says `S` is a type of subsets `s ≤ M` that contain `1`
 and are closed under `(*)` -/
@@ -92,10 +94,12 @@ class submonoid_class (S : Type*) (M : out_param $ Type*) [mul_one_class M] [set
 
 /-- An additive submonoid of an additive monoid `M` is a subset containing 0 and
   closed under addition. -/
-structure add_submonoid (M : Type*) [add_zero_class M] :=
-(carrier : set M)
+structure add_submonoid (M : Type*) [add_zero_class M] extends add_subsemigroup M :=
 (zero_mem' : (0 : M) ∈ carrier)
-(add_mem' {a b} : a ∈ carrier → b ∈ carrier → a + b ∈ carrier)
+
+/-- An additive submonoid of an additive monoid `M` can be considered as an
+additive subsemigroup of that additive monoid. -/
+add_decl_doc add_submonoid.to_add_subsemigroup
 
 /-- `add_submonoid_class S M` says `S` is a type of subsets `s ≤ M` that contain `0`
 and are closed under `(+)` -/
@@ -316,7 +320,7 @@ elements of the additive closure of `s`."]
 lemma closure_induction {p : M → Prop} {x} (h : x ∈ closure s)
   (Hs : ∀ x ∈ s, p x) (H1 : p 1)
   (Hmul : ∀ x y, p x → p y → p (x * y)) : p x :=
-(@closure_le _ _ _ ⟨p, H1, Hmul⟩).2 Hs h
+(@closure_le _ _ _ ⟨p, Hmul, H1⟩).2 Hs h
 
 /-- A dependent version of `submonoid.closure_induction`.  -/
 @[elab_as_eliminator, to_additive "A dependent version of `add_submonoid.closure_induction`. "]
@@ -405,6 +409,17 @@ end
 lemma supr_eq_closure {ι : Sort*} (p : ι → submonoid M) :
   (⨆ i, p i) = submonoid.closure (⋃ i, (p i : set M)) :=
 by simp_rw [submonoid.closure_Union, submonoid.closure_eq]
+
+@[to_additive]
+lemma disjoint_def {p₁ p₂ : submonoid M} :
+  disjoint p₁ p₂ ↔ ∀ {x : M}, x ∈ p₁ → x ∈ p₂ → x = 1 :=
+show (∀ x, x ∈ p₁ ∧ x ∈ p₂ → x ∈ ({1} : set M)) ↔ _, by simp
+
+@[to_additive]
+lemma disjoint_def' {p₁ p₂ : submonoid M} :
+  disjoint p₁ p₂ ↔ ∀ {x y : M}, x ∈ p₁ → y ∈ p₂ → x = y → x = 1 :=
+disjoint_def.trans ⟨λ h x y hx hy hxy, h hx $ hxy.symm ▸ hy,
+  λ h x hx hx', h hx hx' rfl⟩
 
 end submonoid
 
