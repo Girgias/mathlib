@@ -993,47 +993,6 @@ ideal.quotient_inf_ring_equiv_pi_quotient _ (λ i j hij, ideal.coprime_of_no_pri
      (ideal.le_of_pow_le_prime hPj)).symm)
 end))
 
-@[to_additive]
-lemma finset.prod_coe_sort {α M : Type*} [comm_monoid M] (s : finset α) (f : α → M) :
-  ∏ i : s, f i = ∏ i in s, f i :=
-by rw [← @finset.prod_attach _ _ s, finset.univ_eq_attach]; refl
-
-@[to_additive]
-lemma finset.prod_coe_sort_eq_attach {α M : Type*} [comm_monoid M] (s : finset α) (f : s → M) :
-  ∏ i : s, f i = ∏ i in s.attach, f i :=
-finset.prod_bij (λ a ha, a) (λ a _, finset.mem_attach _ a) (λ _ _, rfl) (λ _ _ _ _ h, h)
-  (λ a _, ⟨a, finset.mem_univ _, rfl⟩)
-
-lemma finset.erase_insert_eq_erase {α : Type*} [decidable_eq α] (s : finset α) (a : α) :
-  (insert a s).erase a = s.erase a :=
-by by_cases ha : a ∈ s; { simp [ha, finset.erase_insert] }
-
-@[to_additive]
-lemma multiset.to_finset_prod_count {α M : Type*} [decidable_eq α] [comm_monoid M] (s : multiset α)
-  (f : α → M) : (∏ i in s.to_finset, f i ^ s.count i) = (s.map f).prod :=
-begin
-  refine s.induction _ _,
-  { simp },
-  intros a s ih,
-  rw [multiset.to_finset_cons, multiset.map_cons, multiset.prod_cons],
-  calc  ∏ i in insert a s.to_finset, f i ^ (a ::ₘ s).count i
-      = f a * (f a ^ s.count a * ∏ i in s.to_finset.erase a, f i ^ s.count i) : _
-  ... = f a * ∏ i in s.to_finset, f i ^ s.count i : _
-  ... = f a * (multiset.map f s).prod : by rw ih,
-  { rw [← finset.mul_prod_erase _ _ (finset.mem_insert_self a _), multiset.count_cons_self,
-        pow_succ, mul_assoc],
-    congr' 2,
-    refine finset.prod_congr (finset.erase_insert_eq_erase _ _) (λ b hb, _),
-    rw multiset.count_cons_of_ne,
-    rintro rfl,
-    have := finset.not_mem_erase b s.to_finset,
-    contradiction },
-  by_cases ha : a ∈ s,
-  { rw ← finset.mul_prod_erase _ _ (multiset.mem_to_finset.mpr ha) },
-  { rw [finset.erase_eq_of_not_mem (mt multiset.mem_to_finset.mp ha),
-        multiset.count_eq_zero.mpr ha, pow_zero, one_mul] },
-end
-
 open_locale classical
 
 /-- **Chinese remainder theorem** for a Dedekind domain: `R ⧸ I` factors as `Π i, R ⧸ (P i ^ e i)`,
@@ -1045,8 +1004,8 @@ is_dedekind_domain.quotient_equiv_pi_of_prod_eq _ _ _
   (λ i j hij, subtype.coe_injective.ne hij)
   (calc ∏ (P : (factors I).to_finset), (P : ideal R) ^ (factors I).count (P : ideal R)
       = ∏ P in (factors I).to_finset, P ^ (factors I).count P
-    : finset.prod_coe_sort (factors I).to_finset (λ P, P ^ (factors I).count P)
-  ... = ((factors I).map (λ P, P)).prod : multiset.to_finset_prod_count (factors I) (λ P, P)
+    : fintype.prod_coe_sort (factors I).to_finset (λ P, P ^ (factors I).count P)
+  ... = ((factors I).map (λ P, P)).prod : (finset.prod_multiset_map_count (factors I) id).symm
   ... = (factors I).prod : by rw multiset.map_id'
   ... = I : (@associated_iff_eq (ideal R) _ ideal.unique_units _ _).mp (factors_prod hI))
 
